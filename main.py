@@ -101,11 +101,24 @@ def run_program():
                     sleep(2)
                     continue
                 
-                # Upload to Yandex Drive
+                # Upload to Yandex Drive,
+                # first check for subbreed folder
+                file_path = (f'{main_folder}/{'/'.join(breed)}')
+                if subbreeds:
+                    # check and create folder for subbreed
+                    if file_path not in folders_checked:
+                        show_screen(f'  checking for subbreed folder...')
+                        if YaDrive.FF_info(file_path,
+                                            get_code=True) == 404:
+                            show_screen(f'  creating subbreed folder...')
+                            YaDrive.create_folder(file_path)
+                        folders_checked.append(file_path)
+
+                # Uploading
                 show_screen(f'   uploading {' '.join(breed)} photo...')
                 operation = YaDrive.direct_upload_file(
-                    photo_link,
-                    f'{main_folder}/{choose}/{photo_name}')
+                    file_link=photo_link,
+                    file_path=file_path+'/'+photo_name)
                 
                 # wait for every photo to be uploaded (or not)
                 while True:
