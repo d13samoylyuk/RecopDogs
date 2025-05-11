@@ -2,7 +2,6 @@ import requests
 
 
 class YaDriveAPI:
-
     def __init__(self, token):
         self._base_url = 'https://cloud-api.yandex.net/v1/disk/'
         self._headers = {            

@@ -7,6 +7,7 @@ from modules.interact import ask, show_screen
 
 def run_program():
     config = read_json_file('data/config.json')
+    main_folder = 'RecopDogs'
 
     # If there's no token saved,
     # ask for one, check if valid and save it
@@ -19,8 +20,7 @@ def run_program():
     # Load the breeds to check the input later
     show_screen('  loading all breeds...')
     all_breeds = DogAPI().get_all_breeds()['message']
-
-    
+    folders_checked = []
 
     while True:
         show_screen(' "Q" - close program\n'
@@ -41,43 +41,53 @@ def run_program():
 
             YaDrive = YaDriveAPI(config['token'])
 
-        # Check the breed and upload the photo(s)
+        # Check the breed, the folders needed
+        # and upload the photo(s)
         else:
-            # Check if the breed exists
+            # CHECK if the breed exists
             if choose not in all_breeds:
                 show_screen('\n\n\n\n  >>> Invalid breed\n')
                 sleep(1.5)
                 continue
 
-            # check for subbreeds
+            # CHECK for subbreeds
             subbreeds = all_breeds.get(choose)
             if subbreeds:
                 request = [[choose, subbreed] for subbreed in subbreeds]
             else:
                 request = [[choose]]
             
-            # Check if the folder exists
-            show_screen('  checking for RecopDogs folder...')
-            if YaDrive.FF_info(f'RecopDogs', get_code=True) == 404:
-                show_screen('  creating RecopDogs folder...\n')
-                YaDrive.create_folder('RecopDogs')
+            # CHECK if the program folder exists
+            if main_folder not in folders_checked:
+                show_screen(f'  checking for {main_folder} folder...')
+                if YaDrive.FF_info(main_folder, get_code=True) == 404:
+                    show_screen(f'  creating {main_folder} folder...\n')
+                    YaDrive.create_folder(main_folder)
+                folders_checked.append(main_folder)
             
-            # Check if the breed folder exists
-            show_screen('  checking for RecopDogs/'+choose+' folder...')
-            if YaDrive.FF_info(f'RecopDogs/{choose}', get_code=True) == 404:
-                show_screen('  creating RecopDogs/'+choose+' folder...\n')
-                YaDrive.create_folder(f'RecopDogs/{choose}')
+            # CHECK if the breed folder exists
+            if choose not in folders_checked:
+                show_screen('  checking for '
+                            f'{main_folder}/{choose} folder...')
+                if YaDrive.FF_info(f'{main_folder}/{choose}',
+                                    get_code=True) == 404:
+                    show_screen('  creating '
+                                f'{main_folder}/{choose} folder...\n')
+                    YaDrive.create_folder(f'{main_folder}/{choose}')
+                folders_checked.append(choose)
 
-            # Upload the photos
+            # UPLOAD the photos
             upload_count = 0
             for breed in request:
                 # Get photo link + its name
-                show_screen(f'  getting {' '.join(breed)} photo...')
-                photos_links = DogAPI().get_breed_image('/'.join(breed))['message']
+                show_screen(f'  getting {' '.join(breed)} photo link...')
+                photos_links = DogAPI().get_breed_image(
+                    '/'.join(breed))['message']
 
                 # check for not uploaded photo
                 for photo_link in photos_links:
-                    photo_name = f'{'_'.join(breed)}_{photo_link.split("/")[-1]}'
+                    photo_name = (f'{'_'.join(breed)}_'
+                                  f'{photo_link.split("/")[-1]}')
                     if breed_saved(photo_name):
                         photo_name = None
                         continue
@@ -86,7 +96,8 @@ def run_program():
 
                 # if all photos are uploaded, skip
                 if not photo_name:
-                    show_screen(f'  >>> all {" ".join(breed)} photos uploaded!\n')
+                    show_screen(f'  >>> all {" ".join(breed)} '
+                                 'photos already uploaded!\n')
                     sleep(2)
                     continue
                 
@@ -94,7 +105,7 @@ def run_program():
                 show_screen(f'   uploading {' '.join(breed)} photo...')
                 operation = YaDrive.direct_upload_file(
                     photo_link,
-                    f'RecopDogs/{choose}/{photo_name}')
+                    f'{main_folder}/{choose}/{photo_name}')
                 
                 # wait for every photo to be uploaded (or not)
                 while True:
@@ -111,7 +122,6 @@ def run_program():
                          ' photo(s) uploaded')
             sleep(3.5)
             
-
 
 def set_token_dialog():
     '''
